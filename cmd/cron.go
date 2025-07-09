@@ -28,7 +28,7 @@ type Cron struct {
 	scheduler gocron.Scheduler
 }
 
-func NewCron(crontab, exec, shell, flag string, seconds bool) (*Cron, error) {
+func NewCron(crontab, exec, startup, shell, flag string, seconds bool) (*Cron, error) {
 	if runtime.GOOS == "windows" {
 		if shell == "" {
 			shell = os.Getenv("COMSPEC")
@@ -47,6 +47,9 @@ func NewCron(crontab, exec, shell, flag string, seconds bool) (*Cron, error) {
 	cron, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, fmt.Errorf("failed creating scheduler: %v", err)
+	}
+	if startup != "" {
+		cronExec([]string{shell, flag, startup})
 	}
 	if exec != "" {
 		err := addJob(cron, shell, flag, exec, seconds)
