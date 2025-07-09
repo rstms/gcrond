@@ -1,0 +1,1 @@
+*/5 * * * * * echo "howdy" >>/var/log/gcrond

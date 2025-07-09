@@ -34,46 +34,63 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Version: "0.0.1",
 	Use:     "gcrond",
-	Short:   "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short:   "userland cron daemon",
+	Long: `
+Read a contab file and run until stopped, executing the task schedule
+described in the file. 
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+The first 5 fields of the crontab file set the schedule, and the 
+following fields are passed to a shell for execution.
+
+On Unix-like systems the default shell is /bin/sh
+On Windows the value of environment variable COMSPEC is used.
+
+The --seconds flag is provided, an extra seconds field is expected
+in each crontab line
+
+The --exec flag may be used to provide a single crontab record on
+the command line instead of reading a crontab file.
+
+Example crontab line:
+    * * * * * path_to_command -flag params >/var/log/output
+
+`,
+	Run: func(cmd *cobra.Command, args []string) {
+		crontab := viper.GetString("crontab")
+		shell := viper.GetString("shell")
+		cmdFlag := viper.GetString("flag")
+		exec := viper.GetString("exec")
+		seconds := viper.GetBool("seconds")
+		crond, err := NewCron(crontab, exec, shell, cmdFlag, seconds)
+		cobra.CheckErr(err)
+		err = crond.Run()
+		cobra.CheckErr(err)
+	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
-
 func init() {
 	cobra.OnInitialize(InitConfig)
 	OptionString("logfile", "l", "", "log filename")
 	OptionString("config", "c", "", "config file")
+	OptionString("crontab", "f", "gcrontab", "crontab file")
+	OptionString("exec", "e", "", "crontab entry")
+	OptionString("shell", "S", "", "shell binary pathname")
+	OptionString("flag", "F", "", "shell command flag")
 	OptionSwitch("debug", "", "produce debug output")
 	OptionSwitch("verbose", "v", "increase verbosity")
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
+	OptionSwitch("seconds", "s", "use seconds field in crontab")
 }
